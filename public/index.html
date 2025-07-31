@@ -4,102 +4,124 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Private Chat</title>
-  <style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+<style>
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
-      font-family: 'Segoe UI', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
     }
 
     body {
-      background: #0F1B17;
+      background: #1E2C28;
       display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      flex-direction: column;
     }
 
     .chat-container {
-      background: #1E2C28;
-      width: 100%;
-      max-width: 500px;
-      height: 80vh;
+      flex: 1;
       display: flex;
       flex-direction: column;
-      border-radius: 10px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      background: #1E2C28;
     }
 
     .chat-header {
       background-color: #3B7A57;
-      padding: 15px;
+      padding: 12px;
       color: white;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       text-align: center;
+      flex-shrink: 0; /* Prevents header from shrinking */
     }
 
     .messages {
       flex: 1;
-      padding: 15px;
       overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      padding: 10px;
       background: #e5ddd5;
+      -webkit-overflow-scrolling: touch;
     }
 
     .message {
-      max-width: 75%;
-      padding: 10px 15px;
-      border-radius: 20px;
-      word-wrap: break-word;
+      max-width: 80%;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      border-radius: 18px;
       font-size: 15px;
+      line-height: 1.4;
+      word-break: break-word;
     }
 
     .sent {
       align-self: flex-end;
-      background-color: #519e6d;
-      color: #EAEDED;
+      background: #519e6d;
+      color: white;
       border-bottom-right-radius: 0;
     }
 
     .received {
       align-self: flex-start;
-      background-color: #d6a46e;
-      color: #EAEDED;
+      background: #d6a46e;
+      color: white;
       border-bottom-left-radius: 0;
     }
 
     .chat-input {
       display: flex;
+      padding: 8px;
+      background: #1E2C28;
       border-top: 1px solid #253732;
+      flex-shrink: 0; /* Prevents input from shrinking */
     }
 
     #messageInput {
       flex: 1;
-      padding: 10px;
+      padding: 10px 12px;
       border: none;
+      border-radius: 20px;
+      background: #253732;
+      color: white;
       font-size: 16px;
       outline: none;
     }
 
     button {
-      padding: 10px 20px;
-      background-color: #3B7A57;
+      margin-left: 8px;
+      padding: 0 16px;
+      background: #3B7A57;
       color: white;
       border: none;
-      cursor: pointer;
+      border-radius: 20px;
       font-weight: bold;
-      transition: background 0.3s;
+      cursor: pointer;
     }
 
-    button:hover {
-      background-color: #0e5ccf;
+    /* Mobile-specific tweaks */
+    @media (max-width: 600px) {
+      .chat-input {
+        padding: 8px 10px;
+      }
+      #messageInput {
+        padding: 10px;
+      }
+      button {
+        padding: 0 12px;
+      }
     }
-  </style>
+</style>
 </head>
 <body>
   <div class="chat-container">
@@ -107,47 +129,88 @@
     <div class="messages" id="messages"></div>
     <form class="chat-input" id="form">
       <input id="messageInput" autocomplete="off" placeholder="Type a message..." />
-      <button>Send</button>
+      <button type="submit">Send</button>
     </form>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io();
-  const form = document.getElementById('form');
-  const input = document.getElementById('messageInput');
-  const messages = document.getElementById('messages');
+  <script>
+    // Replace your existing script in index.html with this:
+const socket = io({
+  reconnection: true,
+  reconnectionAttempts: 5
+});
 
-  const username = prompt("Enter your name").trim() || "User";
 
-  // Display a message
-  function addMessage(msg) {
-    const msgDiv = document.createElement('div');
-    msgDiv.classList.add('message');
-    msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
-    msgDiv.innerText = msg.text;
-    messages.appendChild(msgDiv);
-    messages.scrollTop = messages.scrollHeight;
+
+const form = document.getElementById('form');
+const input = document.getElementById('messageInput');
+const messages = document.getElementById('messages');
+
+const username = prompt("Enter your name")?.trim() || "User";
+
+// Display message with sender name
+function addMessage(msg) {
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message');
+  msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
+  
+  if (msg.name !== username) {
+    const nameSpan = document.createElement('span');
+    nameSpan.style.fontWeight = 'bold';
+    nameSpan.textContent = msg.name + ': ';
+    //msgDiv.appendChild(nameSpan);
   }
+  
+  const textNode = document.createTextNode(msg.text);
+  msgDiv.appendChild(textNode);
+  messages.appendChild(msgDiv);
+  messages.scrollTop = messages.scrollHeight;
+}
 
-  // Send new message
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    if (input.value) {
-      socket.emit('chat message', { name: username, text: input.value });
-      input.value = '';
-    }
-  });
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const message = input.value.trim();
+  if (message) {
+    socket.emit('chat message', { 
+      name: username, 
+      text: message 
+    });
+    input.value = '';
+  }
+});
 
-  // Show past messages
-  socket.on('previous messages', function (msgs) {
-    msgs.forEach(addMessage);
-  });
+socket.on('previous messages', (msgs) => {
+  messages.innerHTML = '';
+  msgs.forEach(addMessage);
+});
 
-  // Show new messages
-  socket.on('chat message', function (msg) {
-    addMessage(msg);
-  });
-</script>
+socket.on('chat message', (msg) => {
+  addMessage(msg);
+});
+
+// Debugging events
+socket.onAny((event, ...args) => {
+  console.log('Socket event:', event, args);
+});
+
+function adjustLayout() {
+  if (window.visualViewport) {
+    // Adjust body height when keyboard appears/disappears
+    document.body.style.height = `${window.visualViewport.height}px`;
+    // Auto-scroll messages to bottom after a small delay
+    setTimeout(() => {
+      messages.scrollTop = messages.scrollHeight;
+    }, 100);
+  }
+}
+
+// Set up event listeners for mobile devices
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', adjustLayout);
+}
+window.addEventListener('resize', adjustLayout);
+
+  </script>
 </body>
 </html>
