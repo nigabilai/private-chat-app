@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Private Chat</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', sans-serif;
+    }
+
+    body {
+      background: #0F1B17;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .chat-container {
+      background: #1E2C28;
+      width: 100%;
+      max-width: 500px;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background-color: #3B7A57;
+      padding: 15px;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      text-align: center;
+    }
+
+    .messages {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #e5ddd5;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 10px 15px;
+      border-radius: 20px;
+      word-wrap: break-word;
+      font-size: 15px;
+    }
+
+    .sent {
+      align-self: flex-end;
+      background-color: #519e6d;
+      color: #EAEDED;
+      border-bottom-right-radius: 0;
+    }
+
+    .received {
+      align-self: flex-start;
+      background-color: #d6a46e;
+      color: #EAEDED;
+      border-bottom-left-radius: 0;
+    }
+
+    .chat-input {
+      display: flex;
+      border-top: 1px solid #253732;
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      font-size: 16px;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      background-color: #3B7A57;
+      color: white;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #0e5ccf;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="chat-header">💬 Just Us</div>
+    <div class="messages" id="messages"></div>
+    <form class="chat-input" id="form">
+      <input id="messageInput" autocomplete="off" placeholder="Type a message..." />
+      <button>Send</button>
+    </form>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const form = document.getElementById('form');
+  const input = document.getElementById('messageInput');
+  const messages = document.getElementById('messages');
+
+  const username = prompt("Enter your name").trim() || "User";
+
+  // Display a message
+  function addMessage(msg) {
+    const msgDiv = document.createElement('div');
+    msgDiv.classList.add('message');
+    msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
+    msgDiv.innerText = msg.text;
+    messages.appendChild(msgDiv);
+    messages.scrollTop = messages.scrollHeight;
+  }
+
+  // Send new message
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (input.value) {
+      socket.emit('chat message', { name: username, text: input.value });
+      input.value = '';
+    }
+  });
+
+  // Show past messages
+  socket.on('previous messages', function (msgs) {
+    msgs.forEach(addMessage);
+  });
+
+  // Show new messages
+  socket.on('chat message', function (msg) {
+    addMessage(msg);
+  });
+</script>
+</body>
+</html>
