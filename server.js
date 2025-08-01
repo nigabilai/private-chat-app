@@ -56,7 +56,12 @@ io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
   // Send message history
-  Message.find().sort({ timestamp: 1 }).limit(50)
+  Message.find().sort({ timestamp: -1 }).limit(50)
+  .then(messages => {
+    // Since we fetched newest first, reverse to display them in correct order
+    socket.emit('previous messages', messages.reverse());
+  })
+
     .then(messages => socket.emit('previous messages', messages))
     .catch(err => console.error('Fetch messages error:', err));
 
