@@ -1,7 +1,12 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http);
+const io = require('socket.io')(http, {
+  cors: {
+    origin: "*",  // Allow all origins (update in production)
+    methods: ["GET", "POST"]
+  }
+});
 const mongoose = require('mongoose');
 const path = require('path');
 const cors = require('cors');
@@ -10,97 +15,79 @@ const cors = require('cors');
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// MongoDB Connection with your URI
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://nigaabilai:nur12903@nigabilai.ecqbo4s.mongodb.net/?retryWrites=true&w=majority&appName=nigabilai';
+// Hardcoded MongoDB Connection (no .env)
+const MONGODB_URI = 'mongodb+srv://nigaabilai:nur12903@nigabilai.ecqbo4s.mongodb.net/?retryWrites=true&w=majority&appName=nigabilai';
 
-// Enhanced connection settings
 const mongooseOptions = {
   useNewUrlParser: true,
   useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 30000, // 30 seconds timeout
-  socketTimeoutMS: 45000, // 45 seconds socket timeout
+  serverSelectionTimeoutMS: 30000,  // 30 seconds
+  socketTimeoutMS: 45000,          // 45 seconds
   retryWrites: true,
   w: 'majority'
 };
 
-mongoose.connect(MONGODB_URI, mongooseOptions)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    // Attempt to reconnect after 5 seconds
-    setTimeout(() => mongoose.connect(MONGODB_URI, mongooseOptions), 5000);
-  });
+// Connect to MongoDB with automatic retries
+const connectDB = () => {
+  mongoose.connect(MONGODB_URI, mongooseOptions)
+    .then(() => console.log('MongoDB connected'))
+    .catch(err => {
+      console.error('MongoDB connection failed:', err.message);
+      console.log('Retrying in 5 seconds...');
+      setTimeout(connectDB, 5000);
+    });
+};
+connectDB();
 
-// Connection event listeners
-mongoose.connection.on('connected', () => {
-  console.log('Mongoose connected to DB');
-});
+// Database event listeners
+mongoose.connection.on('connected', () => console.log('Mongoose connected'));
+mongoose.connection.on('error', err => console.error('Mongoose error:', err));
+mongoose.connection.on('disconnected', () => console.log('Mongoose disconnected'));
 
-mongoose.connection.on('error', (err) => {
-  console.error('Mongoose connection error:', err);
-});
-
-mongoose.connection.on('disconnected', () => {
-  console.log('Mongoose disconnected from DB');
-});
-
-// Message Schema
-const messageSchema = new mongoose.Schema({
+// Message Model
+const Message = mongoose.model('Message', new mongoose.Schema({
   name: String,
   text: String,
   timestamp: { type: Date, default: Date.now }
-});
+}));
 
-const Message = mongoose.model('Message', messageSchema);
-
-// Socket.io with improved error handling
+// Socket.IO with error handling
 io.on('connection', (socket) => {
-  console.log('A user connected with ID:', socket.id);
+  console.log('User connected:', socket.id);
 
-  // Get previous messages with timeout handling
-  const fetchMessages = async () => {
-    try {
-      const messages = await Message.find()
-        .sort({ timestamp: 1 })
-        .limit(50)
-        .maxTimeMS(20000); // 20 second timeout for query
-      socket.emit('previous messages', messages);
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-      socket.emit('error', 'Failed to load message history');
-    }
-  };
+  // Send message history
+  Message.find().sort({ timestamp: 1 }).limit(50)
+    .then(messages => socket.emit('previous messages', messages))
+    .catch(err => console.error('Fetch messages error:', err));
 
-  fetchMessages();
-
+  // Handle new messages
   socket.on('chat message', async (msg) => {
-    if (!msg.name || !msg.text) {
-      return console.error('Invalid message format:', msg);
-    }
-
+    if (!msg.name || !msg.text) return;
+    
     try {
-      const message = new Message(msg);
-      await message.save();
-      console.log('Message saved:', msg);
-      io.emit('chat message', msg);
+      await new Message(msg).save();
+      io.emit('chat message', msg);  // Broadcast to all
     } catch (err) {
-      console.error('Error saving message:', err);
-      socket.emit('error', 'Failed to save message');
+      console.error('Save message error:', err);
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
-  });
+  socket.on('disconnect', () => console.log('User disconnected:', socket.id));
 });
 
-// Routes
+// Health check route (required for Render)
+app.get('/health', (req, res) => res.sendStatus(200));
+
+// Serve frontend
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start Server
+// Start server
 const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+http.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
 });
+
+// Crash prevention
+process.on('uncaughtException', err => console.error('Crash prevented:', err));
