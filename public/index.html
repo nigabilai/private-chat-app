@@ -54,9 +54,10 @@
     border-radius: 20px;
     word-wrap: break-word;
     font-size: 15px;
-    flex: 1;
-    min-height: 0;
-  }
+    flex: 0 0 auto;
+    width: fit-content;
+    overflow-wrap: break-word;
+}
 
   .sent {
     align-self: flex-end;
@@ -120,7 +121,7 @@ button {
     <div class="chat-header">💬 Just Us</div>
     <div class="messages" id="messages"></div>
     <form class="chat-input" id="form">
-      <input id="messageInput" autocomplete="off" placeholder="Type a message..." />
+      <input id="messageInput" autocomplete="off" placeholder="Someone's missing you..." />
       <button type="submit">Send</button>
     </form>
   </div>
