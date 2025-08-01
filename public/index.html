@@ -3,125 +3,117 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Private Chat</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>this is our place</title>
+ <style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+  }
 
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: #0F1B17;
+  }
 
-<style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
+  .chat-container {
+    width: 100vw;
+    height: 100vh;
+    background: #1E2C28;
+    display: flex;
+    flex-direction: column;
+  }
 
-    html, body {
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-    }
+  .chat-header {
+    background-color: #3B7A57;
+    padding: 15px;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
 
-    body {
-      background: #1E2C28;
-      display: flex;
-      flex-direction: column;
-    }
+  .messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #e5ddd5;
+  }
 
-    .chat-container {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      width: 100%;
-      height: 100%;
-      background: #1E2C28;
-    }
+  .message {
+    max-width: 75%;
+    padding: 10px 15px;
+    border-radius: 20px;
+    word-wrap: break-word;
+    font-size: 15px;
+    flex: 1;
+    min-height: 0;
+  }
 
-    .chat-header {
-      background-color: #3B7A57;
-      padding: 12px;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
-      text-align: center;
-      flex-shrink: 0; /* Prevents header from shrinking */
-    }
+  .sent {
+    align-self: flex-end;
+    background-color: #519e6d;
+    color: #EAEDED;
+    border-bottom-right-radius: 0;
+  }
 
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px;
-      background: #e5ddd5;
-      -webkit-overflow-scrolling: touch;
-    }
+  .received {
+    align-self: flex-start;
+    background-color: #d6a46e;
+    color: #EAEDED;
+    border-bottom-left-radius: 0;
+  }
 
-    .message {
-      max-width: 80%;
-      padding: 10px 14px;
-      margin-bottom: 8px;
-      border-radius: 18px;
-      font-size: 15px;
-      line-height: 1.4;
-      word-break: break-word;
-    }
+  .chat-input {
+    display: flex;
+    border-top: 1px solid #253732;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background-color: #1E2C28;
+  }
 
-    .sent {
-      align-self: flex-end;
-      background: #519e6d;
-      color: white;
-      border-bottom-right-radius: 0;
-    }
+  #messageInput {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    font-size: 16px;
+    outline: none;
+  }
 
-    .received {
-      align-self: flex-start;
-      background: #d6a46e;
-      color: white;
-      border-bottom-left-radius: 0;
-    }
+  button {
+    padding: 10px 20px;
+    background-color: #3B7A57;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+  }
 
-    .chat-input {
-      display: flex;
-      padding: 8px;
-      background: #1E2C28;
-      border-top: 1px solid #253732;
-      flex-shrink: 0; /* Prevents input from shrinking */
-    }
+  input#messageInput {
+  font-size: 16px; /* avoid zoom on mobile */
+  min-height: 48px; /* easier to tap */
+}
 
-    #messageInput {
-      flex: 1;
-      padding: 10px 12px;
-      border: none;
-      border-radius: 20px;
-      background: #253732;
-      color: white;
-      font-size: 16px;
-      outline: none;
-    }
+button {
+  min-height: 48px;
+}
 
-    button {
-      margin-left: 8px;
-      padding: 0 16px;
-      background: #3B7A57;
-      color: white;
-      border: none;
-      border-radius: 20px;
-      font-weight: bold;
-      cursor: pointer;
-    }
 
-    /* Mobile-specific tweaks */
-    @media (max-width: 600px) {
-      .chat-input {
-        padding: 8px 10px;
-      }
-      #messageInput {
-        padding: 10px;
-      }
-      button {
-        padding: 0 12px;
-      }
-    }
+  button:hover {
+    background-color: #0e5ccf;
+  }
 </style>
+
 </head>
 <body>
   <div class="chat-container">
@@ -140,8 +132,6 @@ const socket = io({
   reconnection: true,
   reconnectionAttempts: 5
 });
-
-
 
 const form = document.getElementById('form');
 const input = document.getElementById('messageInput');
@@ -193,24 +183,16 @@ socket.on('chat message', (msg) => {
 socket.onAny((event, ...args) => {
   console.log('Socket event:', event, args);
 });
-
-function adjustLayout() {
-  if (window.visualViewport) {
-    // Adjust body height when keyboard appears/disappears
-    document.body.style.height = `${window.visualViewport.height}px`;
-    // Auto-scroll messages to bottom after a small delay
-    setTimeout(() => {
-      messages.scrollTop = messages.scrollHeight;
-    }, 100);
-  }
-}
-
-// Set up event listeners for mobile devices
-if (window.visualViewport) {
-  window.visualViewport.addEventListener('resize', adjustLayout);
-}
-window.addEventListener('resize', adjustLayout);
-
   </script>
+
+<script>
+  window.addEventListener('resize', () => {
+    const chatInput = document.querySelector('.chat-input');
+    if (window.innerHeight < 500) {
+      chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }
+  });
+</script>
+
 </body>
 </html>
