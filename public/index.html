@@ -15,27 +15,29 @@
   html, body {
     width: 100%;
     height: 100%;
-    background: #0F1B17;
+    background: #0f1115;
+    color: #e6eaf2;
   }
 
   .chat-container {
     width: 100vw;
     height: 100vh;
-    background: #1E2C28;
+    background: linear-gradient(180deg, #141822, #0d111a);
     display: flex;
     flex-direction: column;
   }
 
   .chat-header {
-    background-color: #3B7A57;
+    background-color: #141822;
     padding: 15px;
-    color: white;
+    color: #e6eaf2;
     font-size: 18px;
     font-weight: bold;
     text-align: center;
     position: sticky;
     top: 0;
     z-index: 10;
+    border-bottom: 1px solid #22293a;
   }
 
   .messages {
@@ -45,7 +47,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: #e5ddd5;
+    background: #0f1115;
   }
 
   .message {
@@ -57,29 +59,31 @@
     flex: 0 0 auto;
     width: fit-content;
     overflow-wrap: break-word;
-}
+  }
 
   .sent {
     align-self: flex-end;
-    background-color: #519e6d;
-    color: #EAEDED;
+    background-color: #1e2a44;
+    color: #e6eaf2;
     border-bottom-right-radius: 0;
+    border: 1px solid #2a3954;
   }
 
   .received {
     align-self: flex-start;
-    background-color: #d6a46e;
-    color: #EAEDED;
+    background-color: #1b2333;
+    color: #e6eaf2;
     border-bottom-left-radius: 0;
+    border: 1px solid #1f2a3e;
   }
 
   .chat-input {
     display: flex;
-    border-top: 1px solid #253732;
+    border-top: 1px solid #22293a;
     position: sticky;
     bottom: 0;
     z-index: 10;
-    background-color: #1E2C28;
+    background-color: #141822;
   }
 
   #messageInput {
@@ -88,11 +92,13 @@
     border: none;
     font-size: 16px;
     outline: none;
+    background: #0f141d;
+    color: #e6eaf2;
   }
 
   button {
     padding: 10px 20px;
-    background-color: #3B7A57;
+    background-color: #5b8cff;
     color: white;
     border: none;
     cursor: pointer;
@@ -101,17 +107,17 @@
   }
 
   input#messageInput {
-  font-size: 16px; /* avoid zoom on mobile */
-  min-height: 48px; /* easier to tap */
-}
+    font-size: 16px; /* avoid zoom on mobile */
+    min-height: 48px; /* easier to tap */
+  }
 
-button {
-  min-height: 48px;
-}
-
+  button {
+    min-height: 48px;
+    border-radius: 8px;
+  }
 
   button:hover {
-    background-color: #0e5ccf;
+    background-color: #4674e9;
   }
 </style>
 
@@ -128,72 +134,61 @@ button {
 
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // Replace your existing script in index.html with this:
-const socket = io({
-  reconnection: true,
-  reconnectionAttempts: 5
-});
-
-const form = document.getElementById('form');
-const input = document.getElementById('messageInput');
-const messages = document.getElementById('messages');
-
-const username = prompt("Enter your name")?.trim() || "User";
-
-// Display message with sender name
-function addMessage(msg) {
-  const msgDiv = document.createElement('div');
-  msgDiv.classList.add('message');
-  msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
-  
-  if (msg.name !== username) {
-    const nameSpan = document.createElement('span');
-    nameSpan.style.fontWeight = 'bold';
-    nameSpan.textContent = msg.name + ': ';
-    //msgDiv.appendChild(nameSpan);
-  }
-  
-  const textNode = document.createTextNode(msg.text);
-  msgDiv.appendChild(textNode);
-  messages.appendChild(msgDiv);
-  messages.scrollTop = messages.scrollHeight;
-}
-
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const message = input.value.trim();
-  if (message) {
-    socket.emit('chat message', { 
-      name: username, 
-      text: message 
+    const socket = io({
+      reconnection: true,
+      reconnectionAttempts: 5
     });
-    input.value = '';
-  }
-});
 
-socket.on('previous messages', (msgs) => {
-  messages.innerHTML = '';
-  msgs.forEach(addMessage);
-});
+    const form = document.getElementById('form');
+    const input = document.getElementById('messageInput');
+    const messages = document.getElementById('messages');
 
-socket.on('chat message', (msg) => {
-  addMessage(msg);
-});
+    const username = prompt("Enter your name")?.trim() || "User";
 
-// Debugging events
-socket.onAny((event, ...args) => {
-  console.log('Socket event:', event, args);
-});
+    function addMessage(msg) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('message');
+      msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
+      const textNode = document.createTextNode(msg.text);
+      msgDiv.appendChild(textNode);
+      messages.appendChild(msgDiv);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const message = input.value.trim();
+      if (message) {
+        socket.emit('chat message', { 
+          name: username, 
+          text: message 
+        });
+        input.value = '';
+      }
+    });
+
+    socket.on('previous messages', (msgs) => {
+      messages.innerHTML = '';
+      msgs.forEach(addMessage);
+    });
+
+    socket.on('chat message', (msg) => {
+      addMessage(msg);
+    });
+
+    socket.onAny((event, ...args) => {
+      console.log('Socket event:', event, args);
+    });
   </script>
 
-<script>
-  window.addEventListener('resize', () => {
-    const chatInput = document.querySelector('.chat-input');
-    if (window.innerHeight < 500) {
-      chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    }
-  });
-</script>
+  <script>
+    window.addEventListener('resize', () => {
+      const chatInput = document.querySelector('.chat-input');
+      if (window.innerHeight < 500) {
+        chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    });
+  </script>
 
 </body>
 </html>
