@@ -51,16 +51,36 @@ const Message = mongoose.model('Message', new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 }));
 
+// API route to fetch messages with pagination
+app.get('/messages', async (req, res) => {
+  try {
+    // client can send ?before=timestamp&limit=20
+    const before = req.query.before ? new Date(req.query.before) : new Date();
+    const limit = parseInt(req.query.limit) || 20;
+
+    // fetch messages older than "before"
+    const messages = await Message.find({ timestamp: { $lt: before } })
+      .sort({ timestamp: -1 }) // newest first
+      .limit(limit);
+
+    // return messages in ascending order (oldest first for display)
+    res.json(messages.reverse());
+  } catch (err) {
+    console.error('Pagination error:', err);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
+
+
 // Socket.IO with error handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Send message history
-  Message.find().sort({ timestamp: 1 }).limit(100)
+  // Send latest 20 messages when user connects
+Message.find().sort({ timestamp: -1 }).limit(20)
+  .then(messages => socket.emit('previous messages', messages.reverse()))
+  .catch(err => console.error('Fetch messages error:', err));
 
-
-    .then(messages => socket.emit('previous messages', messages))
-    .catch(err => console.error('Fetch messages error:', err));
 
   // Handle new messages
   socket.on('chat message', async (msg) => {

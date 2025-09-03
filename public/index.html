@@ -167,10 +167,54 @@
       }
     });
 
-    socket.on('previous messages', (msgs) => {
-      messages.innerHTML = '';
-      msgs.forEach(addMessage);
-    });
+    let oldestTimestamp = null;
+let loading = false;
+
+socket.on('previous messages', (msgs) => {
+  messages.innerHTML = '';
+  msgs.forEach(addMessage);
+
+  if (msgs.length > 0) {
+    oldestTimestamp = msgs[0].timestamp; // save oldest
+  }
+});
+
+// Infinite scroll: detect scroll to top
+messages.addEventListener('scroll', async () => {
+  if (messages.scrollTop === 0 && !loading && oldestTimestamp) {
+    loading = true;
+
+    try {
+      const res = await fetch(`/messages?before=${oldestTimestamp}&limit=20`);
+      const olderMessages = await res.json();
+
+      if (olderMessages.length > 0) {
+        // Remember current scroll height
+        const prevHeight = messages.scrollHeight;
+
+        // Prepend older messages
+        olderMessages.forEach(msg => {
+          const msgDiv = document.createElement('div');
+          msgDiv.classList.add('message');
+          msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
+          msgDiv.textContent = msg.text;
+          messages.insertBefore(msgDiv, messages.firstChild);
+        });
+
+        // Update oldest timestamp
+        oldestTimestamp = olderMessages[0].timestamp;
+
+        // Keep scroll in same position
+        messages.scrollTop = messages.scrollHeight - prevHeight;
+      }
+    } catch (err) {
+      console.error("Error fetching older messages:", err);
+    }
+
+    loading = false;
+  }
+});
+
 
     socket.on('chat message', (msg) => {
       addMessage(msg);
