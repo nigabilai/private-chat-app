@@ -51,6 +51,45 @@ const Message = mongoose.model('Message', new mongoose.Schema({
   timestamp: { type: Date, default: Date.now }
 }));
 
+// Streak Model
+const Streak = mongoose.model('Streak', new mongoose.Schema({
+  count: { type: Number, default: 0 },
+  lastUpdated: { type: Date, default: null }
+}));
+
+// Function to update streak
+async function updateStreak() {
+  let streak = await Streak.findOne();
+  const today = new Date();
+  const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  if (!streak) {
+    streak = new Streak({ count: 1, lastUpdated: todayDateOnly });
+    await streak.save();
+    return streak;
+  }
+
+  const last = streak.lastUpdated ? new Date(streak.lastUpdated) : null;
+
+  if (last) {
+    const diffDays = Math.floor((todayDateOnly - last) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) {
+      // same day → no change
+    } else if (diffDays === 1) {
+      streak.count += 1; // next day
+    } else {
+      streak.count = 1; // missed day(s)
+    }
+  } else {
+    streak.count = 1;
+  }
+
+  streak.lastUpdated = todayDateOnly;
+  await streak.save();
+  return streak;
+}
+
+
 // API route to fetch messages with pagination
 app.get('/messages', async (req, res) => {
   try {
@@ -87,15 +126,37 @@ Message.find().sort({ timestamp: -1 }).limit(20)
     if (!msg.name || !msg.text) return;
     
     try {
-      await new Message(msg).save();
-      io.emit('chat message', msg);  // Broadcast to all
-    } catch (err) {
-      console.error('Save message error:', err);
-    }
+  await new Message(msg).save();
+
+  // Update streak when a message is sent
+  const updatedStreak = await updateStreak();
+  io.emit('streakUpdated', { count: updatedStreak.count });
+
+  io.emit('chat message', msg);  // Broadcast to all
+} catch (err) {
+  console.error('Save message error:', err);
+}
   });
 
   socket.on('disconnect', () => console.log('User disconnected:', socket.id));
 });
+
+// API route to fetch current streak
+app.get('/streak', async (req, res) => {
+  try {
+    let streak = await Streak.findOne();
+    if (!streak) {
+      streak = new Streak({ count: 0, lastUpdated: null });
+      await streak.save();
+    }
+    res.json({ count: streak.count });
+  } catch (err) {
+    console.error('Streak fetch error:', err);
+    res.status(500).json({ error: 'Failed to fetch streak' });
+  }
+});
+
+
 
 // Health check route (required for Render)
 app.get('/health', (req, res) => res.sendStatus(200));

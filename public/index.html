@@ -124,7 +124,10 @@
 </head>
 <body>
   <div class="chat-container">
-    <div class="chat-header">💬 Just Us</div>
+    <div class="chat-header">
+  <span id="streak" style="float: left;">🔥 0</span>
+  💬 Just Us
+</div>
     <div class="messages" id="messages"></div>
     <form class="chat-input" id="form">
       <input id="messageInput" autocomplete="off" placeholder="Someone's missing you..." />
@@ -223,6 +226,20 @@ messages.addEventListener('scroll', async () => {
     socket.onAny((event, ...args) => {
       console.log('Socket event:', event, args);
     });
+
+// Fetch current streak when page loads
+fetch("/streak")
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("streak").innerText = `🔥 ${data.count}`;
+  })
+  .catch(err => console.error("Failed to fetch streak", err));
+
+// Listen for live updates
+socket.on("streakUpdated", (data) => {
+  document.getElementById("streak").innerText = `🔥 ${data.count}`;
+});
+
   </script>
 
   <script>
