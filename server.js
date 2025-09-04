@@ -138,6 +138,12 @@ Message.find().sort({ timestamp: -1 }).limit(20)
 }
   });
 
+//handle typing events
+socket.on('typing', (data) => {
+    socket.broadcast.emit('typing', data);
+  });
+
+
   socket.on('disconnect', () => console.log('User disconnected:', socket.id));
 });
 

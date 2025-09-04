@@ -121,6 +121,11 @@
   }
 
 #streak {
+  text-shadow: none; /* no glow normally */
+  transition: text-shadow 0.3s ease;
+}
+
+#streak.glow {
   text-shadow: 0 0 5px #ff6b00, 0 0 10px #ff4500, 0 0 15px #ff6b00; /* fire glow */
 }
 
@@ -162,6 +167,28 @@
       messages.appendChild(msgDiv);
       messages.scrollTop = messages.scrollHeight;
     }
+
+// Typing indicator
+let typingTimeout;
+
+input.addEventListener("input", () => {
+  socket.emit("typing", { name: username, typing: true });
+
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    socket.emit("typing", { name: username, typing: false });
+  }, 1000); // stop typing after 1s of no input
+});
+
+socket.on("typing", (data) => {
+  const streak = document.getElementById("streak");
+  if (data.typing) {
+    streak.classList.add("glow");
+  } else {
+    streak.classList.remove("glow");
+  }
+});
+
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
