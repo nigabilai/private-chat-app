@@ -64,7 +64,7 @@ async function updateStreak() {
   const todayDateOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   if (!streak) {
-    streak = new Streak({ count: 1, lastUpdated: todayDateOnly });
+    streak = new Streak({ count: 5, lastUpdated: todayDateOnly });
     await streak.save();
     return streak;
   }
