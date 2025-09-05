@@ -184,7 +184,7 @@
   const timeSpan = document.createElement('div');
   timeSpan.classList.add('timestamp');
   const date = new Date(msg.timestamp || Date.now());
-  const options = { hour: 'numeric', minute: 'numeric' };
+  const options = { hour: 'numeric', minute: 'numeric', hour12: true };
 timeSpan.textContent = date.toLocaleTimeString([], options);
   msgDiv.appendChild(timeSpan);
 
