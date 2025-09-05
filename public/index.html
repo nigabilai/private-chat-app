@@ -184,9 +184,8 @@
   const timeSpan = document.createElement('div');
   timeSpan.classList.add('timestamp');
   const date = new Date(msg.timestamp || Date.now());
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  timeSpan.textContent = `${hours}:${minutes}`;
+  const options = { hour: 'numeric', minute: 'numeric' };
+timeSpan.textContent = date.toLocaleTimeString([], options);
   msgDiv.appendChild(timeSpan);
 
   // Toggle timestamp on click/tap
