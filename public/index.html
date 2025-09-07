@@ -168,34 +168,45 @@
     const input = document.getElementById('messageInput');
     const messages = document.getElementById('messages');
 
-    const username = prompt("Enter your name")?.trim() || "User";
+    let username = localStorage.getItem("username");
 
-    function addMessage(msg) {
+if (!username) {
+  username = prompt("Enter your name")?.trim() || "User";
+  localStorage.setItem("username", username);
+}
+
+
+   function addMessage(msg, prepend = false) {
   const msgDiv = document.createElement('div');
   msgDiv.classList.add('message');
   msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
 
-  // Text node
+  // Text
   const textNode = document.createElement('div');
   textNode.textContent = msg.text;
   msgDiv.appendChild(textNode);
 
-  // Timestamp (hidden by default)
+  // Timestamp
   const timeSpan = document.createElement('div');
   timeSpan.classList.add('timestamp');
   const date = new Date(msg.timestamp || Date.now());
   const options = { hour: 'numeric', minute: 'numeric', hour12: true };
-timeSpan.textContent = date.toLocaleTimeString([], options);
+  timeSpan.textContent = date.toLocaleTimeString([], options);
   msgDiv.appendChild(timeSpan);
 
-  // Toggle timestamp on click/tap
+  // Toggle timestamp on click
   msgDiv.addEventListener('click', () => {
     timeSpan.classList.toggle('show');
   });
 
-  messages.appendChild(msgDiv);
-  messages.scrollTop = messages.scrollHeight;
+  if (prepend) {
+    messages.insertBefore(msgDiv, messages.firstChild);
+  } else {
+    messages.appendChild(msgDiv);
+    messages.scrollTop = messages.scrollHeight;
+  }
 }
+
 
 
 // Typing indicator
@@ -257,13 +268,9 @@ messages.addEventListener('scroll', async () => {
         // Remember current scroll height
         const prevHeight = messages.scrollHeight;
 
-        // Prepend older messages
-        olderMessages.forEach(msg => {
-          const msgDiv = document.createElement('div');
-          msgDiv.classList.add('message');
-          msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
-          msgDiv.textContent = msg.text;
-          messages.insertBefore(msgDiv, messages.firstChild);
+        // Prepend older messages (use addMessage)
+        olderMessages.reverse().forEach(msg => {
+          addMessage(msg, true);
         });
 
         // Update oldest timestamp
