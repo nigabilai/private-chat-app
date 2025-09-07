@@ -141,6 +141,37 @@
   display: block;
 }
 
+/* Reactions under messages */
+.reactions {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  font-size: 16px;
+}
+
+/* Emoji picker popup */
+.emoji-picker {
+  position: absolute;
+  background: #1b2333;
+  border: 1px solid #2a3954;
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  gap: 6px;
+  z-index: 1000;
+}
+
+.emoji-picker button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.emoji-picker button:hover {
+  transform: scale(1.2);
+}
+
 </style>
 
 </head>
@@ -168,39 +199,117 @@
     const input = document.getElementById('messageInput');
     const messages = document.getElementById('messages');
 
+
     let username = localStorage.getItem("username");
 
 if (!username) {
   username = prompt("Enter your name")?.trim() || "User";
   localStorage.setItem("username", username);
 }
+    const EMOJIS = ['🤍','😅','😂','😮','😢','😭'];
+let pickerEl = null;
+
 
 
     function addMessage(msg) {
   const msgDiv = document.createElement('div');
   msgDiv.classList.add('message');
   msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
+  msgDiv.dataset.id = msg._id; // keep messageId for reactions
 
   // Text node
   const textNode = document.createElement('div');
   textNode.textContent = msg.text;
   msgDiv.appendChild(textNode);
 
-  // Timestamp (hidden by default)
+  // Timestamp
   const timeSpan = document.createElement('div');
   timeSpan.classList.add('timestamp');
   const date = new Date(msg.timestamp || Date.now());
   const options = { hour: 'numeric', minute: 'numeric', hour12: true };
-timeSpan.textContent = date.toLocaleTimeString([], options);
+  timeSpan.textContent = date.toLocaleTimeString([], options);
   msgDiv.appendChild(timeSpan);
 
-  // Toggle timestamp on click/tap
+  // Toggle timestamp on click
   msgDiv.addEventListener('click', () => {
     timeSpan.classList.toggle('show');
   });
 
+  // Reaction container
+  const reactionsDiv = document.createElement('div');
+  reactionsDiv.classList.add('reactions');
+  msgDiv.appendChild(reactionsDiv);
+
+  // Right-click / long-press → open emoji picker
+  msgDiv.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showEmojiPicker(e.pageX, e.pageY, msg._id);
+  });
+
+  // Render existing reactions (if any)
+  if (msg.reactions) renderReactions(msg._id, msg.reactions);
+
   messages.appendChild(msgDiv);
   messages.scrollTop = messages.scrollHeight;
+}
+
+
+function showEmojiPicker(x, y, messageId) {
+  if (pickerEl) pickerEl.remove();
+
+  pickerEl = document.createElement('div');
+  pickerEl.classList.add('emoji-picker');
+  pickerEl.style.left = x + 'px';
+  pickerEl.style.top = y + 'px';
+
+  EMOJIS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.textContent = emoji;
+    btn.onclick = () => {
+      socket.emit('reaction:set', { messageId, user: username, emoji }, (res) => {
+        if (!res.ok) alert("Failed to react: " + res.error);
+      });
+      pickerEl.remove();
+      pickerEl = null;
+    };
+    pickerEl.appendChild(btn);
+  });
+
+  document.body.appendChild(pickerEl);
+
+  // Close picker on outside click
+  setTimeout(() => {
+    document.addEventListener('click', closePickerOnce, { once: true });
+  }, 0);
+
+  function closePickerOnce() {
+    if (pickerEl) pickerEl.remove();
+    pickerEl = null;
+  }
+}
+
+function renderReactions(messageId, reactions) {
+  const msgDiv = document.querySelector(`.message[data-id="${messageId}"]`);
+  if (!msgDiv) return;
+  const reactionsDiv = msgDiv.querySelector('.reactions');
+  reactionsDiv.innerHTML = '';
+
+  // Group by emoji → count
+  const counts = {};
+  for (const [user, emoji] of Object.entries(reactions)) {
+    counts[emoji] = (counts[emoji] || 0) + 1;
+  }
+
+  Object.entries(counts).forEach(([emoji, count]) => {
+    const span = document.createElement('span');
+    span.textContent = count > 1 ? `${emoji} ${count}` : emoji;
+    if (reactions[username] === emoji) {
+      span.style.outline = '1px solid #5b8cff';
+      span.style.borderRadius = '6px';
+      span.style.padding = '0 3px';
+    }
+    reactionsDiv.appendChild(span);
+  });
 }
 
 
@@ -294,6 +403,11 @@ messages.addEventListener('scroll', async () => {
     socket.onAny((event, ...args) => {
       console.log('Socket event:', event, args);
     });
+
+socket.on('reaction:updated', ({ messageId, reactions }) => {
+  renderReactions(messageId, reactions);
+});
+
 
 // Fetch current streak when page loads
 fetch("/streak")
