@@ -141,24 +141,55 @@
   display: block;
 }
 
-/* Reactions under messages */
+/* Enhanced reaction styles */
 .reactions {
   margin-top: 4px;
   display: flex;
   gap: 4px;
   font-size: 16px;
+  flex-wrap: wrap;
 }
 
-/* Emoji picker popup */
+.reactions span {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.reactions span:hover {
+  transform: scale(1.15);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.reactions span.user-reaction {
+  outline: 1.5px solid #5b8cff;
+  background: rgba(91, 140, 255, 0.2);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.reactions span.added {
+  animation: popIn 0.3s ease;
+}
+
+/* Improved emoji picker */
 .emoji-picker {
-  position: absolute;
+  position: fixed;
   background: #1b2333;
   border: 1px solid #2a3954;
   border-radius: 12px;
-  padding: 6px;
+  padding: 8px;
   display: flex;
   gap: 6px;
   z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
 }
 
 .emoji-picker button {
@@ -166,10 +197,16 @@
   border: none;
   cursor: pointer;
   font-size: 20px;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
-.emoji-picker button:hover {
-  transform: scale(1.2);
+.emoji-picker button:hover,
+.emoji-picker button:focus {
+  transform: scale(1.3);
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
 }
 
 </style>
@@ -217,10 +254,16 @@ let pickerEl = null;
   msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
   msgDiv.dataset.id = msg._id; // keep messageId for reactions
 
+  // Message content container
+  const contentDiv = document.createElement('div');
+  contentDiv.style.display = 'flex';
+  contentDiv.style.flexDirection = 'column';
+  
   // Text node
   const textNode = document.createElement('div');
   textNode.textContent = msg.text;
-  msgDiv.appendChild(textNode);
+  textNode.style.marginBottom = '4px';
+  contentDiv.appendChild(textNode);
 
   // Timestamp
   const timeSpan = document.createElement('div');
@@ -228,46 +271,70 @@ let pickerEl = null;
   const date = new Date(msg.timestamp || Date.now());
   const options = { hour: 'numeric', minute: 'numeric', hour12: true };
   timeSpan.textContent = date.toLocaleTimeString([], options);
-  msgDiv.appendChild(timeSpan);
-
-  // Toggle timestamp on click
-  msgDiv.addEventListener('click', () => {
-    timeSpan.classList.toggle('show');
-  });
+  contentDiv.appendChild(timeSpan);
 
   // Reaction container
   const reactionsDiv = document.createElement('div');
   reactionsDiv.classList.add('reactions');
-  msgDiv.appendChild(reactionsDiv);
+  contentDiv.appendChild(reactionsDiv);
 
-  // Right-click / long-press → open emoji picker
+  msgDiv.appendChild(contentDiv);
+
+  // Toggle timestamp on click
+  msgDiv.addEventListener('click', (e) => {
+    // Don't toggle timestamp if clicking on a reaction
+    if (!e.target.closest('.reactions')) {
+      timeSpan.classList.toggle('show');
+    }
+  });
+
+  // Right-click → open emoji picker
   msgDiv.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     showEmojiPicker(e.pageX, e.pageY, msg._id);
   });
 
+  // Touch events for mobile (long press)
+  let pressTimer;
+  msgDiv.addEventListener('touchstart', (e) => {
+    pressTimer = setTimeout(() => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      showEmojiPicker(touch.clientX, touch.clientY, msg._id);
+    }, 500); // 500ms long press
+  });
+
+  msgDiv.addEventListener('touchend', () => {
+    clearTimeout(pressTimer);
+  });
+
+  msgDiv.addEventListener('touchmove', () => {
+    clearTimeout(pressTimer);
+  });
+
   // Render existing reactions (if any)
-  if (msg.reactions) renderReactions(msg._id, msg.reactions);
+  if (msg.reactions) {
+    renderReactions(msg._id, msg.reactions);
+  }
 
   messages.appendChild(msgDiv);
   messages.scrollTop = messages.scrollHeight;
 }
-
 
 function showEmojiPicker(x, y, messageId) {
   if (pickerEl) pickerEl.remove();
 
   pickerEl = document.createElement('div');
   pickerEl.classList.add('emoji-picker');
-  pickerEl.style.left = x + 'px';
-  pickerEl.style.top = y + 'px';
-
+  
+  // Create emoji buttons
   EMOJIS.forEach(emoji => {
     const btn = document.createElement('button');
     btn.textContent = emoji;
+    btn.setAttribute('aria-label', `React with ${emoji}`);
     btn.onclick = () => {
       socket.emit('reaction:set', { messageId, user: username, emoji }, (res) => {
-        if (!res.ok) alert("Failed to react: " + res.error);
+        if (!res.ok) console.error("Failed to react:", res.error);
       });
       pickerEl.remove();
       pickerEl = null;
@@ -276,16 +343,43 @@ function showEmojiPicker(x, y, messageId) {
   });
 
   document.body.appendChild(pickerEl);
+  
+  // Ensure picker stays within viewport
+  const rect = pickerEl.getBoundingClientRect();
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  
+  // Adjust position if near edge
+  const adjustedX = x + rect.width > viewportWidth ? viewportWidth - rect.width - 10 : x;
+  const adjustedY = y + rect.height > viewportHeight ? viewportHeight - rect.height - 10 : y;
+  
+  pickerEl.style.left = adjustedX + 'px';
+  pickerEl.style.top = adjustedY + 'px';
 
   // Close picker on outside click
-  setTimeout(() => {
-    document.addEventListener('click', closePickerOnce, { once: true });
-  }, 0);
+setTimeout(() => {
+  document.addEventListener('click', closeAllPickers, { once: true });
+}, 0);
+  
+  // Add keyboard navigation
+  pickerEl.addEventListener('keydown', (e) => {
+    const buttons = pickerEl.querySelectorAll('button');
+    const currentIndex = Array.from(buttons).indexOf(document.activeElement);
+    
+    if (e.key === 'ArrowRight') {
+      buttons[Math.min(currentIndex + 1, buttons.length - 1)]?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      buttons[Math.max(currentIndex - 1, 0)]?.focus();
+    } else if (e.key === 'Escape') {
+      closeAllPickers();
+    }
+  });
 
-  function closePickerOnce() {
-    if (pickerEl) pickerEl.remove();
-    pickerEl = null;
-  }
+  // Focus first button when picker opens
+  setTimeout(() => {
+    const firstButton = pickerEl.querySelector('button');
+    if (firstButton) firstButton.focus();
+  }, 0);
 }
 
 function renderReactions(messageId, reactions) {
@@ -303,14 +397,64 @@ function renderReactions(messageId, reactions) {
   Object.entries(counts).forEach(([emoji, count]) => {
     const span = document.createElement('span');
     span.textContent = count > 1 ? `${emoji} ${count}` : emoji;
+    
+    // Check if this is the current user's reaction
     if (reactions[username] === emoji) {
-      span.style.outline = '1px solid #5b8cff';
-      span.style.borderRadius = '6px';
-      span.style.padding = '0 3px';
+      span.classList.add('user-reaction');
     }
+    
+    // Add animation for new reactions
+    span.classList.add('added');
+    setTimeout(() => span.classList.remove('added'), 300);
+    
+    // Add click to remove own reaction
+    if (reactions[username] === emoji) {
+      span.onclick = (e) => {
+        e.stopPropagation();
+        socket.emit('reaction:clear', { messageId, user: username }, (res) => {
+          if (!res.ok) console.error("Failed to remove reaction:", res.error);
+        });
+      };
+    } else {
+      // Add click to add the same reaction (if not already user's reaction)
+      span.onclick = (e) => {
+        e.stopPropagation();
+        socket.emit('reaction:set', { messageId, user: username, emoji }, (res) => {
+          if (!res.ok) console.error("Failed to react:", res.error);
+        });
+      };
+    }
+    
     reactionsDiv.appendChild(span);
   });
 }
+
+// Helper function to close any open picker
+function closeAllPickers() {
+  if (pickerEl) {
+    pickerEl.remove();
+    pickerEl = null;
+  }
+}
+
+// Add click outside to close picker
+document.addEventListener('click', (e) => {
+  if (pickerEl && !pickerEl.contains(e.target)) {
+    closeAllPickers();
+  }
+});
+
+// Add escape key to close picker
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pickerEl) {
+    closeAllPickers();
+  }
+});
+
+// Listen for live streak updates
+socket.on("streakUpdated", (data) => {
+  document.getElementById("streak").innerText = `🔥 ${data.count}`;
+});
 
 
 // Typing indicator
@@ -373,13 +517,9 @@ messages.addEventListener('scroll', async () => {
         const prevHeight = messages.scrollHeight;
 
         // Prepend older messages
-        olderMessages.forEach(msg => {
-          const msgDiv = document.createElement('div');
-          msgDiv.classList.add('message');
-          msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
-          msgDiv.textContent = msg.text;
-          messages.insertBefore(msgDiv, messages.firstChild);
-        });
+olderMessages.forEach(msg => {
+  addMessage(msg); // ✅ This will properly set up the message with all features
+});
 
         // Update oldest timestamp
         oldestTimestamp = olderMessages[0].timestamp;
@@ -416,11 +556,6 @@ fetch("/streak")
     document.getElementById("streak").innerText = `🔥 ${data.count}`;
   })
   .catch(err => console.error("Failed to fetch streak", err));
-
-// Listen for live updates
-socket.on("streakUpdated", (data) => {
-  document.getElementById("streak").innerText = `🔥 ${data.count}`;
-});
 
   </script>
 
