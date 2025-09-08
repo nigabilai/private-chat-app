@@ -48,7 +48,12 @@ mongoose.connection.on('disconnected', () => console.log('Mongoose disconnected'
 const Message = mongoose.model('Message', new mongoose.Schema({
   name: String,
   text: String,
-  timestamp: { type: Date, default: Date.now }
+  timestamp: { type: Date, default: Date.now },
+  reactions: {
+    type: Map, // key: username, value: emoji
+    of: String,
+    default: {}
+  }
 }));
 
 // Streak Model
@@ -142,6 +147,50 @@ Message.find().sort({ timestamp: -1 }).limit(20)
 socket.on('typing', (data) => {
     socket.broadcast.emit('typing', data);
   });
+
+  // Handle reactions
+  const ALLOWED_EMOJIS = new Set(['🤍','😅','😂','😮','😢','😭']);
+
+  socket.on('reaction:set', async ({ messageId, user, emoji }) => {
+  if (!['🤍', '😅', '😂', '😮', '😢','😭'].includes(emoji)) return;
+
+  try {
+    const updated = await Message.findByIdAndUpdate(
+      messageId,
+      { $set: { [`reactions.${user}`]: emoji } },
+      { new: true }
+    );
+
+    if (updated) {
+      io.emit('reaction:updated', {
+        messageId,
+        reactions: Object.fromEntries(updated.reactions) // ✅ changed
+      });
+    }
+  } catch (error) {
+    console.error('Error setting reaction:', error);
+  }
+});
+
+// Reaction: Clear
+socket.on('reaction:clear', async ({ messageId, user }) => {
+  try {
+    const updated = await Message.findByIdAndUpdate(
+      messageId,
+      { $unset: { [`reactions.${user}`]: "" } },
+      { new: true }
+    );
+
+    if (updated) {
+      io.emit('reaction:updated', {
+        messageId,
+        reactions: Object.fromEntries(updated.reactions) // ✅ changed
+      });
+    }
+  } catch (error) {
+    console.error('Error clearing reaction:', error);
+  }
+});
 
 
   socket.on('disconnect', () => console.log('User disconnected:', socket.id));
