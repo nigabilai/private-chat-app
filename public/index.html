@@ -498,7 +498,12 @@ let loading = false;
 
 socket.on('previous messages', (msgs) => {
   messages.innerHTML = '';
-  msgs.forEach(addMessage);
+
+  msgs.forEach(msg => {
+    // Convert reactions Map (from MongoDB) to plain object
+    msg.reactions = msg.reactions ? Object.fromEntries(Object.entries(msg.reactions)) : {};
+    addMessage(msg);
+  });
 
   if (msgs.length > 0) {
     oldestTimestamp = msgs[0].timestamp; // save oldest

@@ -122,8 +122,17 @@ io.on('connection', (socket) => {
 
   // Send latest 20 messages when user connects
 Message.find().sort({ timestamp: -1 }).limit(20)
-  .then(messages => socket.emit('previous messages', messages.reverse()))
+  .then(messages => {
+    // Convert Map to plain object for each message
+    const msgs = messages.map(m => {
+      const msgObj = m.toObject();
+      msgObj.reactions = Object.fromEntries(m.reactions);
+      return msgObj;
+    });
+    socket.emit('previous messages', msgs.reverse());
+  })
   .catch(err => console.error('Fetch messages error:', err));
+
 
 
   // Handle new messages
