@@ -516,7 +516,7 @@ messages.addEventListener('scroll', async () => {
     loading = true;
 
     try {
-      const res = await fetch(`/messages?before=${oldestTimestamp}&limit=20`);
+      const res = await fetch(`/messages?before=${oldestTimestamp}&limit=50`);
       const olderMessages = await res.json();
 
       if (olderMessages.length > 0) {

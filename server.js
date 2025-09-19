@@ -98,9 +98,9 @@ async function updateStreak() {
 // API route to fetch messages with pagination
 app.get('/messages', async (req, res) => {
   try {
-    // client can send ?before=timestamp&limit=20
+    // client can send ?before=timestamp&limit=50
     const before = req.query.before ? new Date(req.query.before) : new Date();
-    const limit = parseInt(req.query.limit) || 20;
+    const limit = parseInt(req.query.limit) || 50;
 
     // fetch messages older than "before"
     const messages = await Message.find({ timestamp: { $lt: before } })
@@ -120,8 +120,8 @@ app.get('/messages', async (req, res) => {
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Send latest 20 messages when user connects
-Message.find().sort({ timestamp: -1 }).limit(20)
+  // Send latest 50 messages when user connects
+Message.find().sort({ timestamp: -1 }).limit(50)
   .then(messages => {
     // Convert Map to plain object for each message
     const msgs = messages.map(m => {
