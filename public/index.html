@@ -1,37 +1,579 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Letter</title>
-    <style>
-        body {
-            background: #f4ead0;
-            margin: 20px;
-            font-family: 'Segoe UI', sans-serif;
-            font-size: 18px;
-            line-height: 1.6;
-            white-space: pre-wrap; /* preserves line breaks */
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>this was our place</title>
+ <style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+  }
 
+  html, body {
+    width: 100%;
+    height: 100%;
+    background: #0f1115;
+    color: #e6eaf2;
+  }
 
-           .signature {
-      text-align: right;
-      margin-top: 40px;
-      font-family: 'Caveat', cursive;
-      font-size: 18px;
-        }
-    </style>
+  .chat-container {
+    width: 100vw;
+    height: 100vh;
+    background: linear-gradient(180deg, #141822, #0d111a);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .chat-header {
+    background-color: #141822;
+    padding: 15px;
+    color: #e6eaf2;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid #22293a;
+  }
+
+  .messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #0f1115;
+  }
+
+  .message {
+    max-width: 75%;
+    padding: 10px 15px;
+    border-radius: 20px;
+    word-wrap: break-word;
+    font-size: 15px;
+    flex: 0 0 auto;
+    width: fit-content;
+    overflow-wrap: break-word;
+  }
+
+  .sent {
+    align-self: flex-end;
+    background-color: #1e2a44;
+    color: #e6eaf2;
+    border-bottom-right-radius: 0;
+    border: 1px solid #2a3954;
+  }
+
+  .received {
+    align-self: flex-start;
+    background-color: #1b2333;
+    color: #e6eaf2;
+    border-bottom-left-radius: 0;
+    border: 1px solid #1f2a3e;
+  }
+
+  .chat-input {
+    display: flex;
+    border-top: 1px solid #22293a;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background-color: #141822;
+  }
+
+  #messageInput {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    font-size: 16px;
+    outline: none;
+    background: #0f141d;
+    color: #e6eaf2;
+  }
+
+  button {
+    padding: 10px 20px;
+    background-color: #5b8cff;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+  }
+
+  input#messageInput {
+    font-size: 16px; /* avoid zoom on mobile */
+    min-height: 48px; /* easier to tap */
+  }
+
+  button {
+    min-height: 48px;
+    border-radius: 8px;
+  }
+
+  button:hover {
+    background-color: #4674e9;
+  }
+
+#streak {
+  text-shadow: none; /* no glow normally */
+  transition: text-shadow 0.3s ease;
+}
+
+#streak.glow {
+  text-shadow: 0 0 5px #ff6b00, 0 0 10px #ff4500, 0 0 15px #ff6b00; /* fire glow */
+}
+
+.timestamp {
+  display: none;
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.timestamp.show {
+  display: block;
+}
+
+/* Enhanced reaction styles */
+.reactions {
+  margin-top: 4px;
+  display: flex;
+  gap: 4px;
+  font-size: 16px;
+  flex-wrap: wrap;
+}
+
+.reactions span {
+  transition: all 0.2s ease;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.reactions span:hover {
+  transform: scale(1.15);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.reactions span.user-reaction {
+  outline: 1.5px solid #5b8cff;
+  background: rgba(91, 140, 255, 0.2);
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.reactions span.added {
+  animation: popIn 0.3s ease;
+}
+
+/* Improved emoji picker — now centered */
+.emoji-picker {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  z-index: 1000;
+  background: transparent;   /* no background */
+  border: none;              /* no border */
+  box-shadow: none;          /* remove shadow */
+  padding: 0;
+}
+
+.emoji-picker span {
+  font-size: 28px;           /* bigger, like WhatsApp */
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.emoji-picker span:hover {
+  transform: scale(1.3);
+}
+
+.emoji-picker button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 6px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.emoji-picker button:hover,
+.emoji-picker button:focus {
+  transform: scale(1.3);
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+</style>
+
 </head>
 <body>
-<b>L’AMOUR DE MA VIE,</b>
+  <div class="chat-container">
+    <div class="chat-header">
+  <span id="streak" style="float: left;">🔥 0</span>
+  💬 Just Us
+</div>
+    <div class="messages" id="messages"></div>
+    <form class="chat-input" id="form">
+      <input id="messageInput" autocomplete="off" placeholder="Someone's missing you..." />
+      <button type="submit">Send</button>
+    </form>
+  </div>
 
-you are the best person I met, the type of person this world lacks. I love the way how you always understand and empathize. Maisha, You have given me the greatest possible happiness. I know for certain there will not be a single soul like you. You see there is no way your card "amake toh bhulei geso" will ever succeed. So dear remembrance, I'm always gonna keep you within me. There will always gonna be a part of my soul completely belongs to you. 
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io({
+      reconnection: true,
+      reconnectionAttempts: 5
+    });
 
-I have always been a very shy and hard-to-reach person. I have never really liked talking to people that much. With most people I felt like I am wasting my energy. But you came along. Maybe because you are so much like my mother. She has been my best friend growing up. It stuns me how accurately she can read me whenever something is wrong. But I also have issues with her. I spent my life saying sorry to her for no reason. But I love her. Things we do for the people we love. Its never enough. No matter what you do or how much you do for them. You will never feel you are doing enough. I have always felt this unsatisfaction within me. I felt them for you asw. I never could make you enough happy. If it was enough, maybe I would stop loving you.
+    const form = document.getElementById('form');
+    const input = document.getElementById('messageInput');
+    const messages = document.getElementById('messages');
 
-Now when I look back I can see everything. I see how I fell for you, although I tried my best not to. It was so obvious, I mean you are too good to be true. I never thought I deserved you. Idk why, I just never felt like I have done enough good things to have you in my life. I haven't won a war or conquer something. You are worth dying in a war for. Never look down on you. Never. Don't make anything or anyone ever make you feel like, you dont deserve something. You deserve every happiness there ever was. Never settle for anything less. Work on yourself and take the best care. Never stop being kind, never let anything change you. Kindness wont give you enough in return, might even bring you torment but you must stay beautiful. My pretty girl, please be always good to yourself and never give up on you. Life may disappoint you in a lot of ways but be gentle to yourself. We know very little about what to come. So no matter how deep you fall, just know that someone's praying for your comeback.
 
-I'm sorry I have to take this website down. But I'm afraid I might just have a break down anytime and say things that will hurt both of us. Or maybe we'll just fall into pattern and wont be able to say goodbye until it creates a mess. I don't want you to stuck here . I want you to move on , have certainty in life. I want you to be happy. And you know, if there is any need I am always one call apart.
-<div class="signature">- truly yours</div>
- </body>
+    let username = localStorage.getItem("username");
+
+if (!username) {
+  username = prompt("Enter your name")?.trim() || "User";
+  localStorage.setItem("username", username);
+}
+    const EMOJIS = ['🤍','😅','😂','😮','😢','😭'];
+let pickerEl = null;
+
+
+
+    function addMessage(msg) {
+  const msgDiv = document.createElement('div');
+  msgDiv.classList.add('message');
+  msgDiv.classList.add(msg.name === username ? 'sent' : 'received');
+  msgDiv.dataset.id = msg._id; // keep messageId for reactions
+
+  // Message content container
+  const contentDiv = document.createElement('div');
+  contentDiv.style.display = 'flex';
+  contentDiv.style.flexDirection = 'column';
+  
+  // Text node
+  const textNode = document.createElement('div');
+  textNode.textContent = msg.text;
+  textNode.style.marginBottom = '4px';
+  contentDiv.appendChild(textNode);
+
+  // Timestamp
+  const timeSpan = document.createElement('div');
+  timeSpan.classList.add('timestamp');
+  const date = new Date(msg.timestamp || Date.now());
+  const options = { hour: 'numeric', minute: 'numeric', hour12: true };
+  timeSpan.textContent = date.toLocaleTimeString([], options);
+  contentDiv.appendChild(timeSpan);
+
+  // Reaction container
+  const reactionsDiv = document.createElement('div');
+  reactionsDiv.classList.add('reactions');
+  contentDiv.appendChild(reactionsDiv);
+
+  msgDiv.appendChild(contentDiv);
+
+  // Toggle timestamp on click
+  msgDiv.addEventListener('click', (e) => {
+    // Don't toggle timestamp if clicking on a reaction
+    if (!e.target.closest('.reactions')) {
+      timeSpan.classList.toggle('show');
+    }
+  });
+
+  // Right-click → open emoji picker
+  msgDiv.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    showEmojiPicker(e.pageX, e.pageY, msg._id);
+  });
+
+  // Touch events for mobile (long press)
+  let pressTimer;
+  msgDiv.addEventListener('touchstart', (e) => {
+    pressTimer = setTimeout(() => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      showEmojiPicker(touch.clientX, touch.clientY, msg._id);
+    }, 500); // 500ms long press
+  });
+
+  msgDiv.addEventListener('touchend', () => {
+    clearTimeout(pressTimer);
+  });
+
+  msgDiv.addEventListener('touchmove', () => {
+    clearTimeout(pressTimer);
+  });
+
+  // Render existing reactions (if any)
+  if (msg.reactions) {
+    renderReactions(msg._id, msg.reactions);
+  }
+
+  messages.appendChild(msgDiv);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function showEmojiPicker(x, y, messageId) {
+  if (pickerEl) pickerEl.remove();
+
+  pickerEl = document.createElement('div');
+  pickerEl.classList.add('emoji-picker');
+  
+  // Create emoji buttons
+  EMOJIS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.textContent = emoji;
+    btn.setAttribute('aria-label', `React with ${emoji}`);
+    btn.onclick = () => {
+      socket.emit('reaction:set', { messageId, user: username, emoji }, (res) => {
+        if (!res.ok) console.error("Failed to react:", res.error);
+      });
+      pickerEl.remove();
+      pickerEl = null;
+    };
+    pickerEl.appendChild(btn);
+  });
+
+  document.body.appendChild(pickerEl);
+  
+
+  // Close picker on outside click
+setTimeout(() => {
+  document.addEventListener('click', closeAllPickers, { once: true });
+}, 0);
+  
+  // Add keyboard navigation
+  pickerEl.addEventListener('keydown', (e) => {
+    const buttons = pickerEl.querySelectorAll('button');
+    const currentIndex = Array.from(buttons).indexOf(document.activeElement);
+    
+    if (e.key === 'ArrowRight') {
+      buttons[Math.min(currentIndex + 1, buttons.length - 1)]?.focus();
+    } else if (e.key === 'ArrowLeft') {
+      buttons[Math.max(currentIndex - 1, 0)]?.focus();
+    } else if (e.key === 'Escape') {
+      closeAllPickers();
+    }
+  });
+
+  // Focus first button when picker opens
+  setTimeout(() => {
+    const firstButton = pickerEl.querySelector('button');
+    if (firstButton) firstButton.focus();
+  }, 0);
+}
+
+function renderReactions(messageId, reactions) {
+  const msgDiv = document.querySelector(`.message[data-id="${messageId}"]`);
+  if (!msgDiv) return;
+  const reactionsDiv = msgDiv.querySelector('.reactions');
+  reactionsDiv.innerHTML = '';
+
+  // Group by emoji → count
+  const counts = {};
+  for (const [user, emoji] of Object.entries(reactions)) {
+    counts[emoji] = (counts[emoji] || 0) + 1;
+  }
+
+  Object.entries(counts).forEach(([emoji, count]) => {
+    const span = document.createElement('span');
+    span.textContent = count > 1 ? `${emoji} ${count}` : emoji;
+    
+    // Check if this is the current user's reaction
+    if (reactions[username] === emoji) {
+      span.classList.add('user-reaction');
+    }
+    
+    // Add animation for new reactions
+    span.classList.add('added');
+    setTimeout(() => span.classList.remove('added'), 300);
+    
+    // Add click to remove own reaction
+    if (reactions[username] === emoji) {
+      span.onclick = (e) => {
+        e.stopPropagation();
+        socket.emit('reaction:clear', { messageId, user: username }, (res) => {
+          if (!res.ok) console.error("Failed to remove reaction:", res.error);
+        });
+      };
+    } else {
+      // Add click to add the same reaction (if not already user's reaction)
+      span.onclick = (e) => {
+        e.stopPropagation();
+        socket.emit('reaction:set', { messageId, user: username, emoji }, (res) => {
+          if (!res.ok) console.error("Failed to react:", res.error);
+        });
+      };
+    }
+    
+    reactionsDiv.appendChild(span);
+  });
+}
+
+// Helper function to close any open picker
+function closeAllPickers() {
+  if (pickerEl) {
+    pickerEl.remove();
+    pickerEl = null;
+  }
+}
+
+// Add click outside to close picker
+document.addEventListener('click', (e) => {
+  if (pickerEl && !pickerEl.contains(e.target)) {
+    closeAllPickers();
+  }
+});
+
+// Add escape key to close picker
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pickerEl) {
+    closeAllPickers();
+  }
+});
+
+// Listen for live streak updates
+socket.on("streakUpdated", (data) => {
+  document.getElementById("streak").innerText = `🔥 ${data.count}`;
+});
+
+
+// Typing indicator
+let typingTimeout;
+
+input.addEventListener("input", () => {
+  socket.emit("typing", { name: username, typing: true });
+
+  clearTimeout(typingTimeout);
+  typingTimeout = setTimeout(() => {
+    socket.emit("typing", { name: username, typing: false });
+  }, 1000); // stop typing after 1s of no input
+});
+
+socket.on("typing", (data) => {
+  const streak = document.getElementById("streak");
+  if (data.typing) {
+    streak.classList.add("glow");
+  } else {
+    streak.classList.remove("glow");
+  }
+});
+
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const message = input.value.trim();
+      if (message) {
+        socket.emit('chat message', { 
+          name: username, 
+          text: message 
+        });
+        input.value = '';
+      }
+    });
+
+    let oldestTimestamp = null;
+let loading = false;
+
+socket.on('previous messages', (msgs) => {
+  messages.innerHTML = '';
+
+  msgs.forEach(msg => {
+    // Convert reactions Map (from MongoDB) to plain object
+    msg.reactions = msg.reactions ? Object.fromEntries(Object.entries(msg.reactions)) : {};
+    addMessage(msg);
+  });
+
+  if (msgs.length > 0) {
+    oldestTimestamp = msgs[0].timestamp; // save oldest
+  }
+});
+
+// Infinite scroll: detect scroll to top
+messages.addEventListener('scroll', async () => {
+  if (messages.scrollTop === 0 && !loading && oldestTimestamp) {
+    loading = true;
+
+    try {
+      const res = await fetch(`/messages?before=${oldestTimestamp}&limit=50`);
+      const olderMessages = await res.json();
+
+      if (olderMessages.length > 0) {
+        // Remember current scroll height
+        const prevHeight = messages.scrollHeight;
+
+        // Prepend older messages
+olderMessages.forEach(msg => {
+  addMessage(msg); // ✅ This will properly set up the message with all features
+});
+
+        // Update oldest timestamp
+        oldestTimestamp = olderMessages[0].timestamp;
+
+        // Keep scroll in same position
+        messages.scrollTop = messages.scrollHeight - prevHeight;
+      }
+    } catch (err) {
+      console.error("Error fetching older messages:", err);
+    }
+
+    loading = false;
+  }
+});
+
+
+    socket.on('chat message', (msg) => {
+      addMessage(msg);
+    });
+
+    socket.onAny((event, ...args) => {
+      console.log('Socket event:', event, args);
+    });
+
+socket.on('reaction:updated', ({ messageId, reactions }) => {
+  renderReactions(messageId, reactions);
+});
+
+
+// Fetch current streak when page loads
+fetch("/streak")
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("streak").innerText = `🔥 ${data.count}`;
+  })
+  .catch(err => console.error("Failed to fetch streak", err));
+
+  </script>
+
+  <script>
+    window.addEventListener('resize', () => {
+      const chatInput = document.querySelector('.chat-input');
+      if (window.innerHeight < 500) {
+        chatInput.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }
+    });
+  </script>
+
+</body>
 </html>
